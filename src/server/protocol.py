@@ -36,9 +36,9 @@ class SendMessageRequest(Request):
 
     def parse_payload(self, payload):
         message_format = '<16sBI'
-        message_size = struct.calcsize(message_format)
-        self.dest_id, self.message_type, self.content_size = struct.unpack(message_format, data[:message_size])
-        self.message_content = payload[message_size:]
+        message_header_size = struct.calcsize(message_format)
+        self.dest_id, self.message_type, self.content_size = struct.unpack(message_format, data[:message_header_size])
+        self.message_content = payload[message_header_size:]
 
         if self.message_type == TYPE_KEY_REQUEST:
             assert self.content_size == 0, 'Invalid content size for key request'
@@ -59,11 +59,18 @@ REQUESTS = {
     1004: RecieveMessagesRequest,
 }
 
-def parse_request(data):
+def recvall(s, size):
+    data = b''
+    while len(data) < size:
+        data += s.recv(size - len(data))
+    return data
+
+def parse_request(conn):
     header_format = '<16sBHI'
     header_size = struct.calcsize(header_format)
-    client_id, version, code, size = struct.unpack(header_format, data[:header_size])
-    payload = data[header_size:]
+    header_data = recvall(conn, header_size)
+    client_id, version, code, size = struct.unpack(header_format, header_data)
+    payload = recvall(conn, size)
     return REQUESTS[code](client_id, version, code, size, payload)
 
 
@@ -79,12 +86,15 @@ class Response:
     def build_payload(self):
         raise NotImplementedError()
 
+    def send(self, conn):
+        conn.send(self.build())
+
 
 class RegisterSuccessResponse(Response):
-    def __init__(self, client_id):
+    def __init__(self, client):
         super().__init__()
         self.code = 2000
-        self.client_id = client_id
+        self.client_id = client.client_id
 
     def build_payload(self):
         return self.client_id
@@ -118,7 +128,7 @@ class SendMessageResponse(Response):
         self.message_id = message_id
 
     def build_payload(self):
-        return struct.pack('<16sI', self.recipient_id, self.message_id)
+        return struct.pack('<16s4s', self.recipient_id, self.message_id)
 
 
 class RecieveMessagesResponse(Response):
@@ -129,7 +139,7 @@ class RecieveMessagesResponse(Response):
 
     def build_payload(self):
         def encode_message(m):
-            return struct.pack('<16sIBI', m.sender_id, m.message_id, m.message_type, len(m.content)) + m.content
+            return struct.pack('<16s4sBI', m.sender_id, m.message_id, m.message_type, len(m.content)) + m.content
 
         return b''.join(encode_message(m) for m in self.messages)
 
