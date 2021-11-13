@@ -1,6 +1,9 @@
 #include "cryptopp_wrapper/Base64Wrapper.h"
 #include "cryptopp_wrapper/RSAWrapper.h"
 #include "cryptopp_wrapper/AESWrapper.h"
+#include "TerminalUI.h"
+#include "Messages.h"
+#include "ClientMessageU.h"
 
 #include <iostream>
 #include <iomanip>
@@ -93,32 +96,53 @@ using std::endl;
 
 int main()
 {
-	boost::asio::io_service io_service;
-	//socket creation
-	tcp::socket socket(io_service);
-	//connection
-	socket.connect(get_server_address());
-	// request/message from client
-	const string msg = "Hello from Client!\n";
-	boost::system::error_code error;
-	boost::asio::write(socket, boost::asio::buffer(msg), error);
-	if (!error) {
-		cout << "Client sent hello message!" << endl;
-	}
-	else {
-		cout << "send failed: " << error.message() << endl;
-	}
+	//MessageRegister reg("Tomer", { 0, });
+	//boost::asio::io_service io_service;
+	////socket creation
+	//tcp::socket socket(io_service);
+	////connection
+	//socket.connect(get_server_address());
+	//// request/message from client
+	//const string msg = "Hello from Client!\n";
+	//boost::system::error_code error;
+	//boost::asio::write(socket, boost::asio::buffer(reg.build()), error);
+	//if (!error) {
+	//	cout << "Client sent hello message!" << endl;
+	//}
+	//else {
+	//	cout << "send failed: " << error.message() << endl;
+	//}
 
-	// getting response from server
-	boost::asio::streambuf receive_buffer;
-	boost::asio::read(socket, receive_buffer, boost::asio::transfer_all(), error);
-	if (error && error != boost::asio::error::eof) {
-		cout << "receive failed: " << error.message() << endl;
-	}
-	else {
-		const char* data = boost::asio::buffer_cast<const char*>(receive_buffer.data());
-		cout << data << endl;
-	}
+	//// getting response from server
+	//boost::asio::streambuf receive_buffer;
+	//boost::asio::read(socket, receive_buffer, boost::asio::transfer_all(), error);
+	//if (error && error != boost::asio::error::eof) {
+	//	cout << "receive failed: " << error.message() << endl;
+	//}
+	//else {
+	//	const char* data = boost::asio::buffer_cast<const char*>(receive_buffer.data());
+	//	cout << data << endl;
+	//}
+
+	ClientMessageU cmu(get_server_address());
+	int choice = 50;
+	bool run = true;
+	TerminalUI tui("MessageU client at your service", {
+		"10) Register",
+		"20) Request for clients list",
+		"30) Request for public key",
+		"40) Request for waiting messages",
+		"50) Send a text message",
+		"51) Send a request for symmetric key",
+		"52) Send your symmetric key",
+		" 0) Exit client",
+		});
+	do {
+		choice = tui.get_choice();
+		run = cmu.execute(choice);
+	} while (run);
+	
+
 
 	
 	return 0;

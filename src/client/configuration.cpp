@@ -9,8 +9,6 @@ using namespace boost::asio;
 using ip::tcp;
 using std::string;
 using std::ifstream;
-using std::cout;
-using std::endl;
 
 
 string read_file(const string& path) {

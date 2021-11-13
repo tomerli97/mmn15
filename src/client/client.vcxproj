@@ -144,16 +144,25 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="client.cpp" />
+    <ClCompile Include="ClientMessageU.cpp" />
     <ClCompile Include="configuration.cpp" />
     <ClCompile Include="cryptopp_wrapper\AESWrapper.cpp" />
     <ClCompile Include="cryptopp_wrapper\Base64Wrapper.cpp" />
     <ClCompile Include="cryptopp_wrapper\RSAWrapper.cpp" />
+    <ClCompile Include="Messages.cpp" />
+    <ClCompile Include="Responses.cpp" />
+    <ClCompile Include="TerminalUI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ClientMessageU.h" />
     <ClInclude Include="configuration.h" />
     <ClInclude Include="cryptopp_wrapper\AESWrapper.h" />
     <ClInclude Include="cryptopp_wrapper\Base64Wrapper.h" />
     <ClInclude Include="cryptopp_wrapper\RSAWrapper.h" />
+    <ClInclude Include="Messages.h" />
+    <ClInclude Include="protocol.h" />
+    <ClInclude Include="Responses.h" />
+    <ClInclude Include="TerminalUI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
