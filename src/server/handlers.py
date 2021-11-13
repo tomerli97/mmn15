@@ -3,11 +3,14 @@ from protocol import *
 from message import Message
 
 def handle_register(conn, req):
+    print('Handling register')
     new_client = client.register(req.name, req.pubkey)
     RegisterSuccessResponse(new_client).send(conn)
 
 def handle_list_users(conn, req):
+    print('Handling list users')
     UserListResponse(client.get_client_list(), client.get_client(req.client_id)).send(conn)
+    print('Sent response')
 
 def handle_get_user_pubkey(conn, req):
     GetUserPubkeyResponse(client.get_client(req.requested_id)).send(conn)

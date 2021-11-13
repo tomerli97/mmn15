@@ -1,6 +1,9 @@
 import struct
 from consts import *
 
+class ConnectionEndedException(Exception):
+    pass
+
 class Request:
     def __init__(self, client_id, version, code, size, payload):
         self.client_id = client_id
@@ -15,8 +18,8 @@ class Request:
 class RegisterRequest(Request):
     def parse_payload(self, payload):
         name, pubkey = struct.unpack('<255s160s', payload)
-        assert '\x00' in name, 'Invalid name - not null terminated'
-        self.name = name.split('\x00')[0]
+        assert b'\x00' in name, 'Invalid name - not null terminated'
+        self.name = name.split(b'\x00')[0]
         self.pubkey = pubkey #TODO: Parse key
 
 
@@ -62,7 +65,10 @@ REQUESTS = {
 def recvall(s, size):
     data = b''
     while len(data) < size:
-        data += s.recv(size - len(data))
+        new_data = s.recv(size - len(data))
+        if len(new_data) == 0:
+            raise ConnectionEndedException()
+        data += new_data
     return data
 
 def parse_request(conn):
