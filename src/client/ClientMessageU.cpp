@@ -46,6 +46,20 @@ void print_hex(const uint8_t * buffer, unsigned int length)
 	std::cout.flags(f);
 }
 
+std::array<uint8_t, 16> ClientMessageU::interactive_input_user()
+{
+	std::string username;
+	cout << "Username to send message to: ";
+	cin >> username;
+
+	if (this->users_names.count(username) == 0) {
+		cout << "Couldn't find user named " << username << endl;
+		cout << "Try to list users again to update contact list" << endl;
+		throw UserInputErrorException();
+	}
+	return this->users_names[username];
+}
+
 void ClientMessageU::do_register()
 {
 	if (this->is_registered) {
@@ -57,10 +71,8 @@ void ClientMessageU::do_register()
 	cout << "New username: ";
 	cin >> username;
 
-	// TODO: generate pubkey
-
 	cout << "Sending register request..." << endl;
-	MessageRegister msg(username, this->pubkey);
+	MessageRegister msg(username, this->get_pubkey());
 	this->srv_send(msg.build());
 	
 
@@ -83,39 +95,200 @@ void ClientMessageU::do_list_clients()
 	cout << "Client list:" << endl;
 	for (auto& it : res.entries) {
 		cout << it.name << endl;
+
+		// Create key if non-existent
+		this->users_names.try_emplace(it.name, std::array<uint8_t, 16>()); //TODO bug?
+		// Add id to map
+		std::copy(std::begin(it.id), std::end(it.id), this->users_names[it.name].begin());
 	}
 }
 
 void ClientMessageU::do_get_pubkey()
 {
+	// TODO: state check for every action
+
+	auto requested_id = this->interactive_input_user();
+
+	// Send pubkey request
+	MessageGetPubkey msg(this->id, requested_id);
+	this->srv_send(msg.build());
+
+	// Get and parse response
+	ResponseGetPubkey res(*this);
+	std::array<uint8_t, 160> requested_pubkey;
+	std::copy(std::begin(res.parsed.pubkey), std::end(res.parsed.pubkey), requested_pubkey.begin());
+
+	// Save pubkey
+	this->users_pubkeys[requested_id] = requested_pubkey;
+}
+
+
+std::string aes_decrypt(std::string key, const void* data, size_t size) {
+	AESWrapper aes(key.data(), key.size());
+	return aes.decrypt(data, size);
+}
+
+std::string aes_decrypt(std::string key, std::string data) {
+	return aes_decrypt(key, data.data(), data.size());
+}
+
+std::string aes_decrypt(std::string key, std::vector<uint8_t> data) {
+	return aes_decrypt(key, data.data(), data.size());
+}
+
+std::string aes_encrypt(std::string key, const void* data, size_t size) {
+	AESWrapper aes(key.data(), key.size());
+	return aes.encrypt(data, size);
+}
+
+std::string aes_encrypt(std::string key, std::string data) {
+	return aes_encrypt(key, data.data(), data.size());
+}
+
+std::string aes_encrypt(std::string key, std::vector<uint8_t> data) {
+	return aes_encrypt(key, data.data(), data.size());
+}
+
+void ClientMessageU::handle_message(GetMessagesPayloadEntry& message)
+{
+	std::string text;
+
+	std::array<uint8_t, 16> sender_id;
+	std::copy(std::begin(message.header.id), std::end(message.header.id), sender_id.begin());
+
+	// Find sender name
+	std::string sender_name = "unknown";
+	for (auto& it : this->users_names) {
+		if (it.second == sender_id) {
+			sender_name = it.first;
+		}
+	}
+
+	// Print message header
+	cout << "From: " << sender_name << endl;
+	cout << "Content:" << endl;
+
+	switch (message.header.type) {
+	case 1: // TODO export to enum
+		// Symmetric key request
+		text = "Request for symmetric key";
+		break;
+	case 2:
+		// Symmetric key response
+		this->users_session_keys[sender_id] = this->keypair.decrypt(std::string(message.data.begin(), message.data.end()));
+		text = "Symmetric key received";
+		break;
+	case 3:
+		if (this->users_session_keys.count(sender_id) == 0) {
+			// No session key
+			text = "can't decrypt message";
+		}
+		else {
+			// Session key exists
+			text.append(aes_decrypt(this->users_session_keys[sender_id], message.data));
+		}
+		break;
+	}
+
+	// Print message footer
+	cout << text << endl;
+	cout << "-----<EOM>-----" << endl << endl;
 }
 
 void ClientMessageU::do_recv_messages()
 {
+	// Request new messages
+	MessageGetMessages msg(this->id);
+	this->srv_send(msg.build());
+
+	// Get and parse response
+	ResponseGetMessages res(*this);
+	
+	// Display and handle messages
+	for (auto& it : res.entries) {	
+		this->handle_message(it);
+	}
 }
 
 void ClientMessageU::do_send_message()
 {
+	auto requested_id = this->interactive_input_user();
+
+	std::string text;
+	cout << "Message: ";
+	cin >> text;
+
+	// Encrypt message
+	if (this->users_session_keys.count(requested_id) == 0) {
+		// No session key
+		cout << "No symmetric key established with this user. Aborting." << endl;
+		throw UserInputErrorException();
+	}
+	std::string encrypted = aes_encrypt(this->users_session_keys[requested_id], text);
+
+	// Send message
+	MessageSendMessage msg(this->id, requested_id, 3/*TODO magic*/, encrypted);
+	this->srv_send(msg.build());
+
+	ResponseMessageAccepted res(*this); // Parse message to check for errors
 }
 
 void ClientMessageU::do_request_symkey()
 {
+	auto requested_id = this->interactive_input_user();
+
+	MessageSendMessage msg(this->id, requested_id, 1/*TODO magic*/, "");
+	this->srv_send(msg.build());
+
+	ResponseMessageAccepted res(*this); // Parse message to check for errors
 }
 
 void ClientMessageU::do_send_symkey()
 {
+	auto requested_id = this->interactive_input_user();
+
+	// Check for user public key and session key
+	if (this->users_pubkeys.count(requested_id) == 0) {
+		cout << "You have not requested the public key for this user yet." << endl;
+		throw UserInputErrorException();
+	}
+	if (this->users_session_keys.count(requested_id) != 0) {
+		cout << "You already have a symmetric key with this user. Aborting." << endl;
+		throw UserInputErrorException();
+	}
+
+	// Generate symmetric key
+	unsigned char key_buffer[AESWrapper::DEFAULT_KEYLENGTH];
+	AESWrapper::GenerateKey(key_buffer, AESWrapper::DEFAULT_KEYLENGTH);
+	std::string key(key_buffer, &key_buffer[AESWrapper::DEFAULT_KEYLENGTH]);
+
+
+	// Encrypt symmetric key with public key
+	//TODO: need to convert pubkey of other user to rsa object and then encrypt
+
+	MessageSendMessage msg(this->id, requested_id, 2/*TODO magic*/, ""); // TODO send key
+	this->srv_send(msg.build());
+
+
+	ResponseMessageAccepted res(*this); // Parse message to check for errors
+
+	// Save symmetric key as session key
+	this->users_session_keys[requested_id] = key;
 }
+
+
 
 ClientMessageU::ClientMessageU(tcp::endpoint server)
 	: io_service(),
 	socket(io_service),
-	pubkey(),
-	is_registered(false)
+	keypair(), // Generate rsa keypair
+	is_registered(false),
+	users_names(),
+	users_pubkeys(),
+	users_session_keys()
 {
 	this->socket.connect(server);
 	// TODO: me.info
-	// TODO: pubkey
-	
 }
 
 bool ClientMessageU::execute(int cmd)
@@ -149,4 +322,16 @@ bool ClientMessageU::execute(int cmd)
 		break;
 	}
 	return true;
+}
+
+std::array<uint8_t, 160> ClientMessageU::get_pubkey()
+{
+	std::array<uint8_t, 160> pubkey;
+	this->keypair.getPublicKey((char*)pubkey.data(), pubkey.size());
+	return pubkey;
+}
+
+UserInputErrorException::UserInputErrorException() throw()
+	: std::runtime_error("")
+{
 }

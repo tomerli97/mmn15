@@ -20,7 +20,7 @@ AESWrapper::AESWrapper()
 	GenerateKey(_key, DEFAULT_KEYLENGTH);
 }
 
-AESWrapper::AESWrapper(const unsigned char* key, unsigned int length)
+AESWrapper::AESWrapper(const void* key, unsigned int length)
 {
 	if (length != DEFAULT_KEYLENGTH)
 		throw std::length_error("key length must be 16 bytes");
@@ -36,7 +36,7 @@ const unsigned char* AESWrapper::getKey() const
 	return _key; 
 }
 
-std::string AESWrapper::encrypt(const char* plain, unsigned int length)
+std::string AESWrapper::encrypt(const void* plain, unsigned int length)
 {
 	CryptoPP::byte iv[CryptoPP::AES::BLOCKSIZE] = { 0 };	// for practical use iv should never be a fixed value!
 
@@ -52,7 +52,7 @@ std::string AESWrapper::encrypt(const char* plain, unsigned int length)
 }
 
 
-std::string AESWrapper::decrypt(const char* cipher, unsigned int length)
+std::string AESWrapper::decrypt(const void* cipher, unsigned int length)
 {
 	CryptoPP::byte iv[CryptoPP::AES::BLOCKSIZE] = { 0 };	// for practical use iv should never be a fixed value!
 

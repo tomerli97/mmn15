@@ -14,11 +14,11 @@ public:
 	static unsigned char* GenerateKey(unsigned char* buffer, unsigned int length);
 
 	AESWrapper();
-	AESWrapper(const unsigned char* key, unsigned int size);
+	AESWrapper(const void* key, unsigned int size);
 	~AESWrapper();
 
 	const unsigned char* getKey() const;
 
-	std::string encrypt(const char* plain, unsigned int length);
-	std::string decrypt(const char* cipher, unsigned int length);
+	std::string encrypt(const void* plain, unsigned int length);
+	std::string decrypt(const void* cipher, unsigned int length);
 };

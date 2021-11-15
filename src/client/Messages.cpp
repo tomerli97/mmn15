@@ -15,6 +15,7 @@ MessageBase::MessageBase(std::array<uint8_t, 16> id, uint16_t code)
 	: header()
 {
 	this->header.code = code;
+	// TODO if server error raise error and add to server don't allow two users with same name
 	for (int i = 0; i < id.size(); i++) {
 		this->header.id[i] = id[i];
 	}
