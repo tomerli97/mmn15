@@ -23,8 +23,13 @@ TerminalUI::TerminalUI(std::string initial_message, std::list<std::string> optio
 
 int TerminalUI::get_choice()
 {
-	int choice = 0;
+	int choice = -1;
 	this->generate_option_list();
 	cin >> choice;
+	if (cin.fail()) {
+		cin.clear();
+		cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		choice = -1;
+	}
 	return choice;
 }
