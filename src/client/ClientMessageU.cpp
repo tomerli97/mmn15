@@ -2,6 +2,7 @@
 #include "Messages.h"
 #include "Responses.h"
 #include "protocol.h"
+#include "configuration.h"
 
 #include <iostream>
 #include <iomanip>
@@ -68,9 +69,15 @@ void ClientMessageU::do_register()
 		return;
 	}
 
+	// Get username
 	std::string username;
 	cout << "New username: ";
 	cin >> username;
+	this->name = username;
+
+	// Generate keypair
+	RSAPrivateWrapper keypair;
+	this->privkey = keypair.getPrivateKey();
 
 	cout << "Sending register request..." << endl;
 	MessageRegister msg(username, this->get_pubkey());
@@ -78,13 +85,13 @@ void ClientMessageU::do_register()
 	
 
 	ResponseRegister res(*this);
-	cout << "Registered! Got id: " << endl;	
-	print_hex(res.parsed.id, sizeof(res.parsed.id));
+	cout << "Registered!" << endl;	
 
 	std::copy(std::begin(res.parsed.id), std::end(res.parsed.id), this->id.begin());
 	this->is_registered = true;
-
-	// TODO: me.info
+	
+	// Save to me.info
+	save_me_info(this->name, this->id, this->privkey);
 }
 
 void ClientMessageU::do_list_clients()
@@ -150,30 +157,30 @@ std::string aes_encrypt(std::string key, std::vector<uint8_t> data) {
 	return aes_encrypt(key, data.data(), data.size());
 }
 
-std::string rsa_decrypt(std::array<uint8_t, 160> key, const void* data, size_t size) {
-	RSAPrivateWrapper rsapriv(key.data(), key.size());
+std::string rsa_decrypt(std::string privkey, const void* data, size_t size) {
+	RSAPrivateWrapper rsapriv(privkey.data(), privkey.size());
 	return rsapriv.decrypt(data, size);
 }
 
-std::string rsa_decrypt(std::array<uint8_t, 160> key, std::string data) {
-	return rsa_decrypt(key, data.data(), data.size());
+std::string rsa_decrypt(std::string privkey, std::string data) {
+	return rsa_decrypt(privkey, data.data(), data.size());
 }
 
-std::string rsa_decrypt(std::array<uint8_t, 160> key, std::vector<uint8_t> data) {
-	return rsa_decrypt(key, data.data(), data.size());
+std::string rsa_decrypt(std::string privkey, std::vector<uint8_t> data) {
+	return rsa_decrypt(privkey, data.data(), data.size());
 }
 
-std::string rsa_encrypt(std::array<uint8_t, 160> key, const void* data, size_t size) {
-	RSAPublicWrapper rsapub(key.data(), key.size());
+std::string rsa_encrypt(std::array<uint8_t, 160> pubkey, const void* data, size_t size) {
+	RSAPublicWrapper rsapub(pubkey.data(), pubkey.size());
 	return rsapub.encrypt(data, size);
 }
 
-std::string rsa_encrypt(std::array<uint8_t, 160> key, std::string data) {
-	return rsa_encrypt(key, data.data(), data.size());
+std::string rsa_encrypt(std::array<uint8_t, 160> pubkey, std::string data) {
+	return rsa_encrypt(pubkey, data.data(), data.size());
 }
 
-std::string rsa_encrypt(std::array<uint8_t, 160> key, std::vector<uint8_t> data) {
-	return rsa_encrypt(key, data.data(), data.size());
+std::string rsa_encrypt(std::array<uint8_t, 160> pubkey, std::vector<uint8_t> data) {
+	return rsa_encrypt(pubkey, data.data(), data.size());
 }
 
 void ClientMessageU::handle_message(GetMessagesPayloadEntry& message)
@@ -202,7 +209,7 @@ void ClientMessageU::handle_message(GetMessagesPayloadEntry& message)
 		break;
 	case MessageType::SYM_KEY_RESPONSE:
 		// Symmetric key response
-		this->users_session_keys[sender_id] = this->keypair.decrypt(std::string(message.data.begin(), message.data.end()));
+		this->users_session_keys[sender_id] = rsa_decrypt(this->privkey, message.data);
 		text = "Symmetric key received";
 		break;
 	case MessageType::TEXT_MESSAGE:
@@ -310,20 +317,19 @@ void ClientMessageU::do_send_symkey()
 	this->users_session_keys[requested_id] = key;
 }
 
-
-
 ClientMessageU::ClientMessageU(tcp::endpoint server)
 	: io_service(),
 	socket(io_service),
-	keypair(), // Generate rsa keypair
+	privkey(),
 	is_registered(false),
 	users_names(),
 	users_pubkeys(),
 	users_session_keys(),
-	id()
+	id(),
+	name()
 {
 	this->socket.connect(server);
-	// TODO: me.info
+	this->is_registered = load_me_info(this->name, this->id, this->privkey);
 }
 
 bool ClientMessageU::execute(int cmd)
@@ -367,7 +373,8 @@ bool ClientMessageU::execute(int cmd)
 std::array<uint8_t, 160> ClientMessageU::get_pubkey()
 {
 	std::array<uint8_t, 160> pubkey;
-	this->keypair.getPublicKey((char*)pubkey.data(), pubkey.size());
+	RSAPrivateWrapper keypair(this->privkey.data(), this->privkey.size());
+	keypair.getPublicKey((char*)pubkey.data(), pubkey.size());
 	return pubkey;
 }
 

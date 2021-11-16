@@ -16,13 +16,15 @@ class ClientMessageU
 {
 	boost::asio::io_service io_service;
 	tcp::socket socket;
-	RSAPrivateWrapper keypair;
+
+	std::string privkey;
 	std::array<uint8_t, 16> id;
+	std::string name;
 	bool is_registered;
 
 	std::map<std::string, std::array<uint8_t, 16>> users_names;
 	std::map<std::array<uint8_t, 16>, std::array<uint8_t, 160>> users_pubkeys;
-	std::map<std::array<uint8_t, 16>, std::string> users_session_keys; // TODO size of key
+	std::map<std::array<uint8_t, 16>, std::string> users_session_keys;
 
 	std::array<uint8_t, 16> interactive_input_user();
 
