@@ -52,7 +52,7 @@ class MessageSendMessage : public MessageBase
 protected:
 	virtual std::vector<uint8_t> buildPayload();
 public:
-	MessageSendMessage(std::array<uint8_t, 16> id, std::array<uint8_t, 16> destination_id, uint8_t message_type, std::string content);
+	MessageSendMessage(std::array<uint8_t, 16> id, std::array<uint8_t, 16> destination_id, MessageType message_type, std::string content);
 };
 
 class MessageGetMessages : public MessageBase

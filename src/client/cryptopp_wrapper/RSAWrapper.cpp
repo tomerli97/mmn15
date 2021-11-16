@@ -1,7 +1,7 @@
 #include "RSAWrapper.h"
 
 
-RSAPublicWrapper::RSAPublicWrapper(const char* key, unsigned int length)
+RSAPublicWrapper::RSAPublicWrapper(const void* key, unsigned int length)
 {
 	CryptoPP::StringSource ss(reinterpret_cast<const CryptoPP::byte*>(key), length, true);
 	_publicKey.Load(ss);
@@ -40,7 +40,7 @@ std::string RSAPublicWrapper::encrypt(const std::string& plain)
 	return cipher;
 }
 
-std::string RSAPublicWrapper::encrypt(const char* plain, unsigned int length)
+std::string RSAPublicWrapper::encrypt(const void* plain, unsigned int length)
 {
 	std::string cipher;
 	CryptoPP::RSAES_OAEP_SHA_Encryptor e(_publicKey);
@@ -55,7 +55,7 @@ RSAPrivateWrapper::RSAPrivateWrapper()
 	_privateKey.Initialize(_rng, BITS);
 }
 
-RSAPrivateWrapper::RSAPrivateWrapper(const char* key, unsigned int length)
+RSAPrivateWrapper::RSAPrivateWrapper(const void* key, unsigned int length)
 {
 	CryptoPP::StringSource ss(reinterpret_cast<const CryptoPP::byte*>(key), length, true);
 	_privateKey.Load(ss);
@@ -111,7 +111,7 @@ std::string RSAPrivateWrapper::decrypt(const std::string& cipher)
 	return decrypted;
 }
 
-std::string RSAPrivateWrapper::decrypt(const char* cipher, unsigned int length)
+std::string RSAPrivateWrapper::decrypt(const void* cipher, unsigned int length)
 {
 	std::string decrypted;
 	CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);

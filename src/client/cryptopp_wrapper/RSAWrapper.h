@@ -21,7 +21,7 @@ private:
 	RSAPublicWrapper& operator=(const RSAPublicWrapper& rsapublic);
 public:
 
-	RSAPublicWrapper(const char* key, unsigned int length);
+	RSAPublicWrapper(const void* key, unsigned int length);
 	RSAPublicWrapper(const std::string& key);
 	~RSAPublicWrapper();
 
@@ -29,7 +29,7 @@ public:
 	char* getPublicKey(char* keyout, unsigned int length) const;
 
 	std::string encrypt(const std::string& plain);
-	std::string encrypt(const char* plain, unsigned int length);
+	std::string encrypt(const void* plain, unsigned int length);
 };
 
 
@@ -46,7 +46,7 @@ private:
 	RSAPrivateWrapper& operator=(const RSAPrivateWrapper& rsaprivate);
 public:
 	RSAPrivateWrapper();
-	RSAPrivateWrapper(const char* key, unsigned int length);
+	RSAPrivateWrapper(const void* key, unsigned int length);
 	RSAPrivateWrapper(const std::string& key);
 	~RSAPrivateWrapper();
 
@@ -57,5 +57,5 @@ public:
 	char* getPublicKey(char* keyout, unsigned int length) const;
 
 	std::string decrypt(const std::string& cipher);
-	std::string decrypt(const char* cipher, unsigned int length);
+	std::string decrypt(const void* cipher, unsigned int length);
 };

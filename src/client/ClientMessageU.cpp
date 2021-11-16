@@ -1,6 +1,7 @@
 #include "ClientMessageU.h"
 #include "Messages.h"
 #include "Responses.h"
+#include "protocol.h"
 
 #include <iostream>
 #include <iomanip>
@@ -149,6 +150,32 @@ std::string aes_encrypt(std::string key, std::vector<uint8_t> data) {
 	return aes_encrypt(key, data.data(), data.size());
 }
 
+std::string rsa_decrypt(std::array<uint8_t, 160> key, const void* data, size_t size) {
+	RSAPrivateWrapper rsapriv(key.data(), key.size());
+	return rsapriv.decrypt(data, size);
+}
+
+std::string rsa_decrypt(std::array<uint8_t, 160> key, std::string data) {
+	return rsa_decrypt(key, data.data(), data.size());
+}
+
+std::string rsa_decrypt(std::array<uint8_t, 160> key, std::vector<uint8_t> data) {
+	return rsa_decrypt(key, data.data(), data.size());
+}
+
+std::string rsa_encrypt(std::array<uint8_t, 160> key, const void* data, size_t size) {
+	RSAPublicWrapper rsapub(key.data(), key.size());
+	return rsapub.encrypt(data, size);
+}
+
+std::string rsa_encrypt(std::array<uint8_t, 160> key, std::string data) {
+	return rsa_encrypt(key, data.data(), data.size());
+}
+
+std::string rsa_encrypt(std::array<uint8_t, 160> key, std::vector<uint8_t> data) {
+	return rsa_encrypt(key, data.data(), data.size());
+}
+
 void ClientMessageU::handle_message(GetMessagesPayloadEntry& message)
 {
 	std::string text;
@@ -168,17 +195,17 @@ void ClientMessageU::handle_message(GetMessagesPayloadEntry& message)
 	cout << "From: " << sender_name << endl;
 	cout << "Content:" << endl;
 
-	switch (message.header.type) {
-	case 1: // TODO export to enum
+	switch ((MessageType)message.header.type) {
+	case MessageType::SYM_KEY_REQUEST:
 		// Symmetric key request
 		text = "Request for symmetric key";
 		break;
-	case 2:
+	case MessageType::SYM_KEY_RESPONSE:
 		// Symmetric key response
 		this->users_session_keys[sender_id] = this->keypair.decrypt(std::string(message.data.begin(), message.data.end()));
 		text = "Symmetric key received";
 		break;
-	case 3:
+	case MessageType::TEXT_MESSAGE:
 		if (this->users_session_keys.count(sender_id) == 0) {
 			// No session key
 			text = "can't decrypt message";
@@ -187,6 +214,9 @@ void ClientMessageU::handle_message(GetMessagesPayloadEntry& message)
 			// Session key exists
 			text.append(aes_decrypt(this->users_session_keys[sender_id], message.data));
 		}
+		break;
+	default:
+		text = "Unsupported message type";
 		break;
 	}
 
@@ -216,7 +246,10 @@ void ClientMessageU::do_send_message()
 
 	std::string text;
 	cout << "Message: ";
-	cin >> text;
+	cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	if (!std::getline(cin, text)) {
+		cout << "Failed to read!" << endl;
+	}
 
 	// Encrypt message
 	if (this->users_session_keys.count(requested_id) == 0) {
@@ -227,7 +260,7 @@ void ClientMessageU::do_send_message()
 	std::string encrypted = aes_encrypt(this->users_session_keys[requested_id], text);
 
 	// Send message
-	MessageSendMessage msg(this->id, requested_id, 3/*TODO magic*/, encrypted);
+	MessageSendMessage msg(this->id, requested_id, MessageType::TEXT_MESSAGE, encrypted);
 	this->srv_send(msg.build());
 
 	ResponseMessageAccepted res(*this); // Parse message to check for errors
@@ -237,11 +270,12 @@ void ClientMessageU::do_request_symkey()
 {
 	auto requested_id = this->interactive_input_user();
 
-	MessageSendMessage msg(this->id, requested_id, 1/*TODO magic*/, "");
+	MessageSendMessage msg(this->id, requested_id, MessageType::SYM_KEY_REQUEST, "");
 	this->srv_send(msg.build());
 
 	ResponseMessageAccepted res(*this); // Parse message to check for errors
 }
+
 
 void ClientMessageU::do_send_symkey()
 {
@@ -264,9 +298,9 @@ void ClientMessageU::do_send_symkey()
 
 
 	// Encrypt symmetric key with public key
-	//TODO: need to convert pubkey of other user to rsa object and then encrypt
+	std::string enc_key = rsa_encrypt(this->users_pubkeys[requested_id], key);
 
-	MessageSendMessage msg(this->id, requested_id, 2/*TODO magic*/, ""); // TODO send key
+	MessageSendMessage msg(this->id, requested_id, MessageType::SYM_KEY_RESPONSE, enc_key);
 	this->srv_send(msg.build());
 
 
@@ -285,7 +319,8 @@ ClientMessageU::ClientMessageU(tcp::endpoint server)
 	is_registered(false),
 	users_names(),
 	users_pubkeys(),
-	users_session_keys()
+	users_session_keys(),
+	id()
 {
 	this->socket.connect(server);
 	// TODO: me.info
@@ -293,33 +328,38 @@ ClientMessageU::ClientMessageU(tcp::endpoint server)
 
 bool ClientMessageU::execute(int cmd)
 {
-	switch (cmd) {
-	case 10:
-		this->do_register();
-		break;
-	case 20:
-		this->do_list_clients();
-		break;
-	case 30:
-		this->do_get_pubkey();
-		break;
-	case 40:
-		this->do_recv_messages();
-		break;
-	case 50:
-		this->do_send_message();
-		break;
-	case 51:
-		this->do_request_symkey();
-		break;
-	case 52:
-		this->do_send_symkey();
-		break;
-	case 0:
-		return false;
-	default:
-		cout << "Invalid command number: " << cmd << endl;
-		break;
+	try {
+		switch (cmd) {
+		case 10:
+			this->do_register();
+			break;
+		case 20:
+			this->do_list_clients();
+			break;
+		case 30:
+			this->do_get_pubkey();
+			break;
+		case 40:
+			this->do_recv_messages();
+			break;
+		case 50:
+			this->do_send_message();
+			break;
+		case 51:
+			this->do_request_symkey();
+			break;
+		case 52:
+			this->do_send_symkey();
+			break;
+		case 0:
+			return false;
+		default:
+			cout << "Invalid command number: " << cmd << endl;
+			break;
+		}
+	}
+	catch (UserInputErrorException e) {
+		cout << "Error oocured, operation aborted." << endl;
 	}
 	return true;
 }

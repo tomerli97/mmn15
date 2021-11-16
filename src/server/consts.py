@@ -1,2 +1,2 @@
-SYM_KEY_LEN = 16 #TODO replace with import from encryption lib
+SYM_KEY_LEN = 128 # Length while encrypted
 SERVER_VERSION = 2

@@ -77,13 +77,13 @@ std::vector<uint8_t> MessageSendMessage::buildPayload()
 	return payload;
 }
 
-MessageSendMessage::MessageSendMessage(std::array<uint8_t, 16> id, std::array<uint8_t, 16> destination_id, uint8_t message_type, std::string content)
+MessageSendMessage::MessageSendMessage(std::array<uint8_t, 16> id, std::array<uint8_t, 16> destination_id, MessageType message_type, std::string content)
 	:MessageBase{ id, 1003 },
 	content(content)
 {
 	memset(&this->payload_header, 0, sizeof(this->payload_header));
 	memcpy(&this->payload_header.id, destination_id.data(), sizeof(this->payload_header.id));
-	this->payload_header.type = message_type;
+	this->payload_header.type = (uint8_t)message_type;
 	this->payload_header.size = content.size();
 }
 

@@ -27,15 +27,13 @@ class Client:
         self.update_last_seen()
         self.pending_messages = []
 
-        
-
     def update_last_seen(self):
         self.last_seen = get_current_time()
 
-    def append_message(message):
+    def append_message(self, message):
         self.pending_messages.append(message)
 
-    def clear_messages():
+    def clear_messages(self):
         self.pending_messages = []
 
 def register(name, pubkey):

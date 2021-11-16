@@ -55,7 +55,7 @@ def main():
             print(f'Handling socket conn {conn.fileno()}')
             try:
                 handle_client(conn) # TODO user disconnect
-            except ConnectionEndedException:
+            except (ConnectionEndedException, ConnectionResetError):
                 print('Removing connection')
                 clients.remove(conn)
 

@@ -29,7 +29,7 @@ class UserListRequest(Request):
 
 class GetUserPubkeyRequest(Request):
     def parse_payload(self, payload):
-        self.requested_id = struct.unpack('<16s', payload)
+        self.requested_id = struct.unpack('<16s', payload)[0]
 
 class SendMessageRequest(Request):
     TYPE_KEY_REQUEST = 1
@@ -40,12 +40,12 @@ class SendMessageRequest(Request):
     def parse_payload(self, payload):
         message_format = '<16sBI'
         message_header_size = struct.calcsize(message_format)
-        self.dest_id, self.message_type, self.content_size = struct.unpack(message_format, data[:message_header_size])
+        self.dest_id, self.message_type, self.content_size = struct.unpack(message_format, payload[:message_header_size])
         self.message_content = payload[message_header_size:]
 
-        if self.message_type == TYPE_KEY_REQUEST:
+        if self.message_type == self.TYPE_KEY_REQUEST:
             assert self.content_size == 0, 'Invalid content size for key request'
-        elif self.message_type == TYPE_KEY_RESPONSE:
+        elif self.message_type == self.TYPE_KEY_RESPONSE:
             assert self.content_size == SYM_KEY_LEN, 'Invalid content size for key response' 
         assert len(self.message_content) == self.content_size, 'Content size mismatch'
 
