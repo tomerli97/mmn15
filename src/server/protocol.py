@@ -20,7 +20,7 @@ class RegisterRequest(Request):
         name, pubkey = struct.unpack('<255s160s', payload)
         assert b'\x00' in name, 'Invalid name - not null terminated'
         self.name = name.split(b'\x00')[0]
-        self.pubkey = pubkey #TODO: Parse key
+        self.pubkey = pubkey
 
 
 class UserListRequest(Request):
@@ -123,7 +123,7 @@ class GetUserPubkeyResponse(Response):
         self.client = client
 
     def build_payload(self):
-        return struct.pack('<16s160s', self.client.client_id, self.client.pubkey) # TODO: pubkey is not bytes
+        return struct.pack('<16s160s', self.client.client_id, self.client.pubkey)
 
 
 class SendMessageResponse(Response):

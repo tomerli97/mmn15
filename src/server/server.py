@@ -57,11 +57,11 @@ def main():
         for conn in ready:
             if conn not in clients:
                 continue
-            print(f'Handling socket conn {conn.fileno()}')
+            logging.info(f'Handling socket {conn.getpeername()}')
             try:
-                handle_client(conn) # TODO user disconnect
+                handle_client(conn)
             except (ConnectionEndedException, ConnectionResetError):
-                print('Removing connection')
+                logging.info(f'Removing connection {conn.getpeername()}')
                 clients.remove(conn)
 
 

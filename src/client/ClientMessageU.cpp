@@ -105,7 +105,7 @@ void ClientMessageU::do_list_clients()
 		cout << it.name << endl;
 
 		// Create key if non-existent
-		this->users_names.try_emplace(it.name, std::array<uint8_t, 16>()); //TODO bug?
+		this->users_names.try_emplace(it.name, std::array<uint8_t, 16>());
 		// Add id to map
 		std::copy(std::begin(it.id), std::end(it.id), this->users_names[it.name].begin());
 	}
@@ -113,8 +113,6 @@ void ClientMessageU::do_list_clients()
 
 void ClientMessageU::do_get_pubkey()
 {
-	// TODO: state check for every action
-
 	auto requested_id = this->interactive_input_user();
 
 	// Send pubkey request
