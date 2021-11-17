@@ -93,7 +93,7 @@ bool load_me_info(std::string& name, std::array<uint8_t, 16>& id, std::string& p
 	// Output
 	name = conf_name;
 	std::copy(conf_id_binary.begin(), conf_id_binary.end(), id.begin());
-	std::copy(conf_privkey_binary.begin(), conf_privkey_binary.end(), privkey.begin());
+	privkey.append(conf_privkey_binary.begin(), conf_privkey_binary.end());
 
 	return true;
 }
