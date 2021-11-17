@@ -78,12 +78,15 @@ bool load_me_info(std::string& name, std::array<uint8_t, 16>& id, std::string& p
 		std::cout << "No me.info file detected, new account must be registered." << std::endl;
 		return false;
 	}
-	std::string conf_name, conf_id, conf_privkey;
+	std::string conf_name, conf_id, conf_privkey, line;
 	std::string conf_id_binary, conf_privkey_binary;
 
 	std::getline(f, conf_name);
 	std::getline(f, conf_id);
-	std::getline(f, conf_privkey);
+	while (!f.eof()) {
+		std::getline(f, line);
+		conf_privkey += line + "\n";
+	}
 
 	f.close();
 

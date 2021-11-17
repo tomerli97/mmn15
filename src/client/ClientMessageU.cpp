@@ -51,7 +51,7 @@ void print_hex(const uint8_t * buffer, unsigned int length)
 std::array<uint8_t, 16> ClientMessageU::interactive_input_user()
 {
 	std::string username;
-	cout << "Username to send message to: ";
+	cout << "Requested username: ";
 	cin >> username;
 
 	if (this->users_names.count(username) == 0) {
