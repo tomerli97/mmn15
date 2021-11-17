@@ -1,6 +1,12 @@
 #include "Responses.h"
 #include <iostream>
 
+ServerErrorMessageException::ServerErrorMessageException() throw()
+	: std::runtime_error("")
+{
+}
+
+
 ResponseBase::ResponseBase(ClientMessageU &cmu)
 	: data(cmu.srv_rcv(sizeof(this->header))),
 	payload()
@@ -11,6 +17,11 @@ ResponseBase::ResponseBase(ClientMessageU &cmu)
 	// Get payload
 	if (this->header.payload_size != 0) {
 		this->payload = cmu.srv_rcv(this->header.payload_size);
+	}
+
+	if (this->header.code == (uint16_t)ResponseCode::GENERAL_ERROR) {
+		// Error message, raise exception so client will abort current operation
+		throw ServerErrorMessageException();
 	}
 }
 

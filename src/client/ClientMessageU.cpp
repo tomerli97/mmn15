@@ -364,8 +364,11 @@ bool ClientMessageU::execute(int cmd)
 			break;
 		}
 	}
-	catch (UserInputErrorException e) {
-		cout << "Error oocured, operation aborted." << endl;
+	catch (UserInputErrorException eu) {
+		cout << "Invalid input, operation aborted." << endl;
+	}
+	catch (ServerErrorMessageException es) {
+		cout << "server responded with an error" << endl;
 	}
 	return true;
 }

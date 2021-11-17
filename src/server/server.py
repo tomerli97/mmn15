@@ -32,6 +32,9 @@ def handle_client(conn):
         HANDLERS[req.code](conn, req)
     except ConnectionEndedException:
         raise
+    except AssertionError as e:
+        logging.info(f'Server assertion: {e.args[0]}')
+        send_general_error(conn, e)
     except Exception as e:
         logging.exception('Got exception while handling client')
         send_general_error(conn, e)

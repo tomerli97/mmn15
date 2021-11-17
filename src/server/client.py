@@ -38,8 +38,11 @@ class Client:
 
 def register(name, pubkey):
     logging.info(f'Creating client {name} with pubkey {pubkey}')
-    c = Client(name, pubkey)
     global g_clients
+
+    assert name not in [c.name for c in g_clients.values()], "Cannot create user with existing name"
+
+    c = Client(name, pubkey)
     g_clients[c.client_id] = c
     logging.info(f'Created client {name} with id {c.client_id}')
     return c

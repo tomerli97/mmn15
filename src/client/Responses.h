@@ -12,6 +12,11 @@
 
 using namespace boost::asio;
 
+class ServerErrorMessageException : public std::runtime_error {
+public:
+	ServerErrorMessageException() throw();
+};
+
 class ResponseBase
 {
 public:
