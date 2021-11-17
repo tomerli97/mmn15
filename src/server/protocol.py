@@ -146,8 +146,9 @@ class RecieveMessagesResponse(Response):
     def build_payload(self):
         def encode_message(m):
             return struct.pack('<16s4sBI', m.sender_id, m.message_id, m.message_type, len(m.content)) + m.content
-
-        return b''.join(encode_message(m) for m in self.messages)
+        payload = b''.join(encode_message(m) for m in self.messages)
+        print(payload.hex())
+        return payload
 
 class GeneralErrorResponse(Response):
     def __init__(self):

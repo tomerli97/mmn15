@@ -1,6 +1,7 @@
 import socket
 import logging
 import select
+import client
 
 from protocol import parse_request, GeneralErrorResponse, ConnectionEndedException
 from handlers import HANDLERS
@@ -42,6 +43,7 @@ def handle_client(conn):
 
 def main():
     server_port = load_config()
+    client.load_db()
     server_socket = create_listening_socket(server_port)
     clients = []
 
